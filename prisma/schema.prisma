@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id       String @id @default(cuid())
+  username String @unique
+  password String
+  role     String // "ADMIN" | "EMPLOYEE"
+  sessions Session[]
+}
+
+model Device {
+  id              String   @id @default(cuid())
+  number          String   @unique
+  type            String   // "PC" | "PS4" | "PS5"
+  hourlyRateSingle Float
+  hourlyRateMulti  Float
+  sessions        Session[]
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  deviceId         String
+  device           Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  startTime        DateTime  @default(now())
+  endTime          DateTime?
+  type             String    // "OPEN" | "FIXED"
+  durationMinutes  Int?
+  isMulti          Boolean   @default(false)
+  isActive         Boolean   @default(true)
+  accumulatedTimeCost Float     @default(0)
+  lastRateChangeTime  DateTime  @default(now())
+  orders           Order[]
+}
+
+model InventoryItem {
+  id       String @id @default(cuid())
+  name     String
+  category String // "DRINK" | "FOOD" | "OTHER"
+  price    Float
+  stock    Int
+  isActive Boolean @default(true)
+  orders   Order[]
+  sales    SaleItem[]
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  sessionId       String
+  session         Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quantity        Int
+  priceAtTime     Float
+  createdAt       DateTime      @default(now())
+}
+
+model Sale {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  totalAmount     Float
+  items           SaleItem[]
+}
+
+model SaleItem {
+  id              String   @id @default(cuid())
+  saleId          String
+  sale            Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quantity        Int
+  priceAtTime     Float
+}
